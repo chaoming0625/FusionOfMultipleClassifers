@@ -1,11 +1,13 @@
 import re
 import jieba
 from jieba import posseg
+import numpy as np
+from collections import defaultdict
 
 
-# ####################################
+# ################################################
 # classifier based on sentiment dict
-# ####################################
+# ################################################
 class DictClassifier:
     def __init__(self):
         self.__root_filepath = "dict/"
@@ -36,10 +38,10 @@ class DictClassifier:
                 if line_number < start:
                     continue
 
-                results.append(self.analyse_sentence(line.strip(), filepath_out))
+                results.append(self.analyse_sentence(line.strip(), filepath_out, print_show))
 
                 # 控制分析的语料的结束位置（行数）
-                if 0 < end < line_number:
+                if 0 < end <= line_number:
                     break
 
         return results
@@ -54,7 +56,7 @@ class DictClassifier:
         # 对每分句进行情感分析
         for i in range(len(the_clauses)):
             # 情感分析子句的数据结构
-            sub_clause = self.__analyse_clause(the_clauses[i].replace("。", "."), runout_filepath)
+            sub_clause = self.__analyse_clause(the_clauses[i].replace("。", "."), runout_filepath, print_show)
 
             # 将子句分析的数据结果添加到整体数据结构中
             comment_analysis["su-clause" + str(i)] = sub_clause
@@ -455,20 +457,19 @@ class DictClassifier:
             f.write("%s" % info)
 
 
-# ####################################
+# ################################################
 # classifier based on K-Nearest Neighbours
-# ####################################
+# ################################################
 class KNNClassifier:
-    def __init__(self, train_data=None, train_data_labels=None, k=3, best_words=None, filepath=None, stopwords=True):
-        self.__filepath = filepath
-        self.__train_data_vectors = None
+    def __init__(self, train_data, train_data_labels, k=3, best_words=None, stopwords=None):
         self.__train_data_labels = []
         self.__total_words = []
-        self.__total_words_length = 0
         self.__k = k
         self.__stopwords = stopwords
+        self.__train_data_vectors = None
+        self.__total_words_length = 0
         if train_data is not None:
-            self.train(train_data, train_data_labels, best_words)
+            self.__train(train_data, train_data_labels, best_words)
 
     def set_k(self, k):
         self.__k = k
@@ -478,6 +479,8 @@ class KNNClassifier:
         for i in range(self.__total_words_length):
             the_vector[i] = doc.count(self.__total_words[i])
         length = sum(the_vector)
+        if length == 0:
+            return [0 for _ in the_vector]
         return [i/length for i in the_vector]
 
     def __get_total_words(self, train_data, best_words):
@@ -488,7 +491,7 @@ class KNNClassifier:
             for doc in train_data:
                 total_words |= set(doc)
         if self.__stopwords:
-            with open("stop_words.txt", encoding="utf-8") as sw_f:
+            with open(self.__stopwords, encoding="utf-8") as sw_f:
                 for line in sw_f:
                     if line.strip() in total_words:
                         total_words.remove(line.strip())
@@ -496,8 +499,6 @@ class KNNClassifier:
 
     @staticmethod
     def __normalize(vectors):
-        sum_vector = vectors.sum(axis=1)
-
         min_values = vectors.min(axis=0)
         max_values = vectors.max(axis=0)
         ranges = max_values - min_values
@@ -506,103 +507,292 @@ class KNNClassifier:
         norm_vectors = norm_vectors / np.tile(ranges, (m, 1))
         return norm_vectors
 
-    def train(self, train_data, train_data_labels, best_words=None):
-        runout_content = "The classifier is training......"
-        print(runout_content)
-        if self.__filepath is not None:
-            Write2File.append(self.__filepath, "\n\n\n\n\n" + "---" * 40 + "\n")
-            Write2File.append(self.__filepath, runout_content + "\n")
-
+    def __train(self, train_data, train_data_labels, best_words=None):
         self.__train_data_labels = train_data_labels[:]
         self.__total_words = self.__get_total_words(train_data, best_words)
         self.__total_words_length = len(self.__total_words)
-        i, vectors = 0, []
+        vectors = []
         for doc in train_data:
-            i += 1
-            # record the program start run time
-            start_time = clock()
-
             vectors.append(self.__doc2vector(doc))
 
-            # record the program run end time
-            end_time = clock()
-
-            # output the runout
-            runout_content = "Have trained %5d doc.Using time %f s." % (i, end_time - start_time)
-            if self.__filepath is not None:
-                Write2File.append(self.__filepath, runout_content + "\n")
-            print(runout_content)
         self.__train_data_vectors = np.array(vectors)
         # self.__train_data_vectors = self.__normalize(np.array(vectors))
 
-    def classify(self, input_data):
+    def __get_sorted_distances(self, input_data):
         size = self.__train_data_vectors.shape
-        input_data_vector = np.array(self.__doc2vector(input_data))
+        vector = self.__doc2vector(input_data)
+        input_data_vector = np.array(vector)
         diff_mat = np.tile(input_data_vector, (size[0], 1)) - self.__train_data_vectors
         sq_diff_mat = diff_mat ** 2
         sq_distances = sq_diff_mat.sum(axis=1)
         distances = sq_distances ** 0.5
         sorted_distances = distances.argsort()
+        return sorted_distances
 
-        class_count, i = {}, 0
+    def multiple_k_classify(self, input_data):
+        # get the distance sorted list
+        sorted_distances = self.__get_sorted_distances(input_data)
 
-        if isinstance(self.__k, list):
-            runout_content = "---" * 40 + "\n"
-            runout_content += "k \t result \t num"
-            if self.__filepath is not None:
-                Write2File.append(self.__filepath, runout_content + "\n")
-            print(runout_content)
+        # some variable
+        i = 0
+        # class_count[0] records the number of label "0"
+        # class_count[1] records the number of label "1"
+        class_count = [0, 0]
+        # final_record[0] records the number of label "0"
+        # final_record[1] records the number of label "1"
+        final_record = [0, 0]
 
-            final_record = []
-            for k in self.__k:
-                while i < k:
-                    label = self.__train_data_labels[sorted_distances[i]]
-                    class_count[label] = class_count.get(label, 0) + 1
-                    i += 1
-                semi_record = sorted(iter(class_count.items()), key=itemgetter(1), reverse=True)
-                final_record.append(semi_record[0][0])
-                runout_content = "%3d \t %3d \t %3d " % (k, semi_record[0][0], semi_record[0][1])
-                if self.__filepath is not None:
-                    Write2File.append(self.__filepath, runout_content + "\n")
-                print(runout_content)
-            result = 0
-            the_sum, length = sum(final_record), len(self.__k)
-            if the_sum > length // 2:
-                result = 1
-            runout_content = "---" * 40 + "\n"
-            runout_content += "final result: %s \t %d / %d \n" % \
-                              ("positive" if result else "negative",
-                               the_sum if result else (length - the_sum), length)
-            runout_content += "---" * 40 + "\n"
-            if self.__filepath is not None:
-                Write2File.append(self.__filepath, runout_content + "\n")
-            print(runout_content)
+        # assert type(k) == list
+        assert type(self.__k) == list
 
-            return result
+        for k in sorted(self.__k):
+            while i < k:
+                label = self.__train_data_labels[sorted_distances[i]]
+                class_count[label] += 1
+                i += 1
+            if class_count[0] > class_count[1]:
+                final_record[0] += 1
+            else:
+                final_record[1] += 1
+
+        if final_record[0] > final_record[1]:
+            return 0
+        else:
+            return 1
+
+    def single_k_classify(self, input_data):
+        # get the distance sorted list
+        sorted_distances = self.__get_sorted_distances(input_data)
+
+        # some variable
+        i = 0
+        # class_count[0] records the number of label "0"
+        # class_count[1] records the number of label "1"
+        class_count = [0, 0]
 
         while i < self.__k:
             label = self.__train_data_labels[sorted_distances[i]]
-            class_count[label] = class_count.get(label, 0) + 1
+            class_count[label] += 1
             i += 1
-        class_count = sorted(iter(class_count.items()), key=itemgetter(1), reverse=True)
-        return class_count[0][0]
+
+        if class_count[0] > class_count[1]:
+            return 0
+        else:
+            return 1
 
 
-# ####################################
+# ################################################
 # classifier based on Naive bayes
-# ####################################
+# ################################################
+class BayesClassifier:
+    def __init__(self, train_data, train_data_labels, best_words):
+        self.__pos_word_p = {}
+        self.__neg_word_p = {}
+        self.__pos_p = 0.
+        self.__neg_p = 1.
+        self.__total_words = []
+        self.__train(train_data, train_data_labels, best_words)
+
+    def __train(self, train_data, train_data_labels, best_words=None):
+        """
+        this method is different from the the method self.train()
+        we use the training data, do some feature selection, then train, get some import values
+        :param train_data:
+        :param train_data_labels:
+        :param best_words:
+        """
+        # get the frequency information of each word
+        total_pos_data, total_neg_data = {}, {}
+        total_pos_length, total_neg_length = 0, 0
+        total_word = set()
+        for i, doc in enumerate(train_data):
+            if train_data_labels[i] == 1:
+                for word in doc:
+                    if best_words is None or word in best_words:
+                        total_pos_data[word] = total_pos_data.get(word, 0) + 1
+                        total_pos_length += 1
+                        total_word.add(word)
+            else:
+                for word in doc:
+                    if best_words is None or word in best_words:
+                        total_neg_data[word] = total_neg_data.get(word, 0) + 1
+                        total_neg_length += 1
+                        total_word.add(word)
+        self.__pos_p = total_pos_length / (total_pos_length + total_neg_length)
+        self.__neg_p = total_neg_length / (total_pos_length + total_neg_length)
+
+        # get each word's probability
+        for word in total_word:
+            self.__pos_word_p[word] = np.log(total_pos_data.get(word, 1e-100) / total_pos_length)
+            self.__neg_word_p[word] = np.log(total_neg_data.get(word, 1e-100) / total_neg_length)
+
+    def classify(self, input_data):
+        """
+        according to the input data, calculate the probability of the each class
+        :param input_data:
+        """
+        pos_score = 0.
+        for word in input_data:
+            pos_score += self.__pos_word_p.get(word, 0.)
+        pos_score += np.log(self.__pos_p)
+
+        neg_score = 0.
+        for word in input_data:
+            neg_score += self.__neg_word_p.get(word, 0.)
+        neg_score += np.log(self.__neg_p)
+
+        if pos_score > neg_score:
+            return 1
+        else:
+            return 0
 
 
-
-# ####################################
+# ################################################
 # classifier based on Maximum Entropy
-# ####################################
+# ################################################
+class MaxEntClassifier:
+    def __init__(self, train_data, train_labels, best_words=None, max_iter=500):
+        self.feats = defaultdict(int)
+        self.labels = {0, 1}
+        self.weight = []
+        if train_data is not None:
+            self.train(train_data, train_labels, best_words, max_iter)
+
+    def prob_weight(self, features, label):
+        weight = 0.0
+        for feature in features:
+            if (label, feature) in self.feats:
+                weight += self.weight[self.feats[(label, feature)]]
+        return np.exp(weight)
+
+    def calculate_probability(self, features):
+        weights = [(self.prob_weight(features, label), label) for label in self.labels]
+        try:
+            z = sum([weight for weight, label in weights])
+            prob = [(weight/z, label) for weight, label in weights]
+        except ZeroDivisionError:
+            return "collapse"
+        return prob
+
+    def convergence(self, last_weight):
+        for w1, w2 in zip(last_weight, self.weight):
+            if abs(w1-w2) >= 0.0001:
+                return False
+        return True
+
+    def train(self, train_data, train_data_labels, best_words=None, max_iter=50):
+        # init the parameters
+        train_data_length = len(train_data_labels)
+        if best_words is None:
+            for i in range(train_data_length):
+                for word in set(train_data[i]):
+                    self.feats[(train_data_labels[i], word)] += 1
+        else:
+            for i in range(train_data_length):
+                for word in set(train_data[i]):
+                    if word in best_words:
+                        self.feats[(train_data_labels[i], word)] += 1
+
+        the_max = max([len(record) - 1 for record in train_data])  # the_max param for GIS training algorithm
+        self.weight = [0.0] * len(self.feats)  # init weight for each feature
+        ep_empirical = [0.0] * len(self.feats)  # init the feature expectation on empirical distribution
+        for i, f in enumerate(self.feats):
+            ep_empirical[i] = self.feats[f] / train_data_length  # feature expectation on empirical distribution
+            self.feats[f] = i  # each feature function correspond to id
+
+        for i in range(max_iter):
+            print("iter: %d" % (i + 1))
+
+            ep_model = [0.0] * len(self.feats)  # feature expectation on model distribution
+            for doc in train_data:
+                prob = self.calculate_probability(doc)  # calculate p(y|x)
+                if prob == "collapse":
+                    print("The program collapse. The iter number: %d." % (i + 1))
+                    return
+                for feature in doc:
+                    for weight, label in prob:
+                        if (label, feature) in self.feats:  # only focus on features from training data.
+                            idx = self.feats[(label, feature)]  # get feature id
+                            ep_model[idx] += weight * (1.0 / train_data_length)  # sum(1/N * f(y,x)*p(y|x)), p(x) = 1/N
+
+            last_weight = self.weight[:]
+            for j, win in enumerate(self.weight):
+                delta = 1.0 / the_max * np.log(ep_empirical[j] / ep_model[j])
+                self.weight[j] += delta  # update weight
+
+            # test if the algorithm is convergence
+            if self.convergence(last_weight):
+                print("The program convergence. The iter number: %d." % (i + 1))
+                break
+
+    def classify(self, the_input_features):
+        prob = self.calculate_probability(the_input_features)
+        prob.sort(reverse=True)
+        if prob[0][0] > prob[1][0]:
+            return prob[0][1]
+        else:
+            return prob[1][1]
 
 
-
-
-# ####################################
+# ################################################
 # classifier based on Support Vector Machine
-# ####################################
+# ################################################
+from sklearn.datasets.base import Bunch
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.svm import LinearSVC
 
 
+class SVMClassifier:
+    def __init__(self, train_data, train_labels):
+        self.train_space = None
+        self.test_space = None
+        self.clf = None
+        self.__train(train_data, train_labels)
+
+    def __train(self, train_data, train_labels):
+        train_bunch = Bunch(label=[], contents=[], filenames=[])
+
+        i = 0
+        for data in train_data:
+            train_bunch.label.append(train_labels[i])
+            train_bunch.contents.append(" ".join(data))
+            train_bunch.filenames.append("train-line-%d" % i)
+            i += 1
+
+        self.train_space = Bunch(label=train_bunch.label, filenames=train_bunch.filenames, tdm=[], vocabulary={})
+        tfidf = TfidfVectorizer(sublinear_tf=True, max_df=0.5)
+        self.train_space.tdm = tfidf.fit_transform(train_bunch.contents)
+        self.train_space.vocabulary = tfidf.vocabulary_
+
+        self.clf = LinearSVC()
+        self.clf.fit(self.train_space.tdm, self.train_space.label)
+
+    def test(self, test_data, test_labels):
+        test_bunch = Bunch(label=[], contents=[], filenames=[])
+        i = 0
+        for data in test_data:
+            test_bunch.label.append(test_labels[i])
+            test_bunch.contents.append(" ".join(data))
+            test_bunch.filenames.append("test-line-%d" % i)
+            i += 1
+
+        test_space = Bunch(label=test_bunch.label, filenames=test_bunch.filenames, edm=[], vocabulary={})
+        tfidf = TfidfVectorizer(sublinear_tf=True, max_df=0.5, vocabulary=self.train_space.vocabulary)
+        test_space.tdm = tfidf.fit_transform(test_bunch.contents)
+        test_space.vocabulary = self.train_space.vocabulary
+        prediction = self.clf.predict(test_space.tdm)
+
+        return prediction
+
+    def classify(self, data):
+        test_bunch = Bunch(contents=[], filenames=[])
+        test_bunch.contents.append(" ".join(data))
+        test_bunch.filenames.append("test-line")
+
+        test_space = Bunch(filenames=test_bunch.filenames, edm=[], vocabulary={})
+        tfidf = TfidfVectorizer(sublinear_tf=True, max_df=0.5, vocabulary=self.train_space.vocabulary)
+        test_space.tdm = tfidf.fit_transform(test_bunch.contents)
+        test_space.vocabulary = self.train_space.vocabulary
+        prediction = self.clf.predict(test_space.tdm)
+
+        return prediction

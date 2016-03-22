@@ -28,7 +28,7 @@ class WaimaiCorpus:
         self.pos_test_num = 0
         self.neg_test_num = 0
 
-        runout_content = "You are using the waimai corpus version 2.0."
+        runout_content = "You are using the waimai corpus version 2.0.\n"
         runout_content += "There are total %d positive and %d negative corpus." % \
                           (self.pos_doc_length, self.neg_doc_length)
         print(runout_content)

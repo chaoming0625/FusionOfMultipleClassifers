@@ -1,0 +1,102 @@
+import xlwt
+import os
+
+
+class Write2File:
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def append(filepath, content):
+        if filepath is not None:
+            with open(filepath, "a", encoding="utf-8") as f:
+                f.write(content)
+
+    @staticmethod
+    def write(filepath, content):
+        if filepath is not None:
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write(content)
+
+    @staticmethod
+    def write_xls(filepath, contents):
+        if os.path.exists(filepath):
+            os.remove(filepath)
+
+        if isinstance(contents, list) and isinstance(contents[0], tuple):
+            wb = xlwt.Workbook()
+            ws = wb.add_sheet("Sheet 1")
+
+            for i, (head, content) in enumerate(contents):
+                ws.write(0, i, head)
+                ws.write(1, i, content)
+
+            wb.save(filepath)
+        elif isinstance(contents, list) and isinstance(contents[0], list) and isinstance(contents[0][0], tuple):
+            wb = xlwt.Workbook()
+            ws = wb.add_sheet("Sheet 1")
+
+            i = 0
+            # write the head
+            for j, (head, _) in enumerate(contents[0]):
+                ws.write(i, j, head)
+
+            # write the content
+            for a_content in contents:
+                i += 1
+                for j, (_, content) in enumerate(a_content):
+                    ws.write(i, j, content)
+
+            wb.save(filepath)
+        else:
+            print("The output format is wrong!")
+
+
+def get_accuracy(origin_labels, classify_labels, parameters, output_filepath=None):
+    assert len(origin_labels) == len(classify_labels)
+
+    xls_contents = []
+
+    xls_contents.extend([("pos train", parameters[0]), ("pos test", parameters[1])])
+    xls_contents.extend([("neg train", parameters[2]), ("neg test", parameters[3])])
+    xls_contents.append(("feature num", parameters[4]))
+
+    pos_right, pos_false = 0, 0
+    neg_right, neg_false = 0, 0
+    for i in range(len(origin_labels)):
+        if origin_labels[i] == 1:
+            if classify_labels[i] == 1:
+                pos_right += 1
+            else:
+                neg_false += 1
+        else:
+            if classify_labels[i] == 0:
+                neg_right += 1
+            else:
+                pos_false += 1
+    xls_contents.extend([("neg-right", neg_right), ("neg-false", neg_false)])
+    xls_contents.extend([("pos-right", pos_right), ("pos-false", pos_false)])
+
+    pos_precision = pos_right / (pos_right + pos_false) * 100
+    pos_recall = pos_right / (pos_right + neg_false) * 100
+    pos_f1 = 2 * pos_precision * pos_recall / (pos_precision + pos_recall)
+    xls_contents.extend([("pos-precision", pos_precision), ("pos-recall", pos_recall), ("pos-f1", pos_f1)])
+
+    neg_precision = neg_right / (neg_right + neg_false) * 100
+    neg_recall = neg_right / (neg_right + pos_false) * 100
+    neg_f1 = 2 * neg_precision * neg_recall / (neg_precision + neg_recall)
+    xls_contents.extend([("neg-precision", neg_precision), ("neg-recall", neg_recall), ("neg-f1", neg_f1)])
+
+    total_precision = (neg_right + pos_right) / (neg_right + neg_false + pos_right + pos_false) * 100
+    xls_contents.append(("total-precision", total_precision))
+
+    print("    pos-right\tpos-false\tneg-right\tneg-false\tpos-precision\tpos-recall\t"
+          "pos-f1\tneg-precision\tneg-recall\tneg-f1\ttotal-precision")
+    print("    " + "---" * 45)
+    print("    %8d\t%8d\t%8d\t%8d\t%8.4f\t%8.4f\t%8.4f\t%8.4f\t%8.4f\t%8.4f\t%8.4f" %
+          (pos_right, pos_false, neg_right, neg_false, pos_precision, pos_recall,
+           pos_f1, neg_precision, neg_recall, neg_f1, total_precision))
+
+    if output_filepath:
+        Write2File.write_xls(output_filepath, xls_contents)
+
