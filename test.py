@@ -121,7 +121,7 @@ def test_svm():
     classify_labels = []
 
     for data in test_data:
-        classify_labels.append(svm.classify(data)[0])
+        classify_labels.append(svm.classify(data))
 
     filepath = "runout/SVMClassifier-pos_train-%d-neg_train-%d-pos_test-%d-neg_test-%d-tdidf" \
                "-%s.xls" % (pos_train_num, neg_train_num, pos_test_num, neg_test_num,
@@ -136,46 +136,18 @@ def test_multiple_classifiers():
     print("Fusion of Multiple Classifiers")
     print("---" * 45)
 
-    from classifiers import DictClassifier, KNNClassifier, BayesClassifier, MaxEntClassifier, SVMClassifier
+    from classifiers import MultipleClassifiers
 
     # get the instance of classifiers
-    ds = DictClassifier()
-    k = [1, 3, 5, 7, 9, 11, 13]
-    k = [21, 25, 29, 33, 37, 41, 45]
-    knn = KNNClassifier(train_data, train_labels, k=k, best_words=best_words)
-    bayes = BayesClassifier(train_data, train_labels, best_words)
     max_iter = 800
-    maxent = MaxEntClassifier(train_data, train_labels, best_words, max_iter)
-    svm = SVMClassifier(train_data, train_labels)
+    k = [1, 3, 5, 7, 9, 11, 13]
+    # k = [21, 25, 29, 33, 37, 41, 45]
+
+    mc = MultipleClassifiers(train_data, train_labels, best_words, k, max_iter)
 
     classify_labels = []
     for data in test_data:
-        results = [0, 0]
-
-        # the classify result of DictClassifier
-        label = ds.classify("".join(data))
-        results[label] += 1
-
-        # the classify result of KNNClassifier
-        label = knn.multiple_k_classify(data)
-        results[label] += 1
-
-        # the classify result of BayesClassifier
-        label = bayes.classify(data)
-        results[label] += 1
-
-        # the classify result of MaxEntClassifier
-        label = maxent.classify(data)
-        results[label] += 1
-
-        # the classify result of SVMClassifier
-        label = svm.classify(data)
-        results[label] += 1
-
-        if results[0] > results[1]:
-            classify_labels.append(0)
-        else:
-            classify_labels.append(1)
+        classify_labels.append(mc.classify(data))
 
     filepath = "runout/MultipleClassifiers-pos_train-%d-neg_train-%d-pos_test-%d-neg_test-%d-k-%s-iter-%d-%s.xls" % (
         pos_train_num, neg_train_num, pos_test_num, neg_test_num, "_".join([str(i) for i in k]),

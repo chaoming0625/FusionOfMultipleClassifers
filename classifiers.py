@@ -508,6 +508,8 @@ class KNNClassifier:
         return norm_vectors
 
     def __train(self, train_data, train_data_labels, best_words=None):
+        print("KNNClassifier is training ...... ")
+
         self.__train_data_labels = train_data_labels[:]
         self.__total_words = self.__get_total_words(train_data, best_words)
         self.__total_words_length = len(self.__total_words)
@@ -517,6 +519,8 @@ class KNNClassifier:
 
         self.__train_data_vectors = np.array(vectors)
         # self.__train_data_vectors = self.__normalize(np.array(vectors))
+
+        print("KNNClassifier trains over!")
 
     def __get_sorted_distances(self, input_data):
         size = self.__train_data_vectors.shape
@@ -601,6 +605,8 @@ class BayesClassifier:
         :param train_data_labels:
         :param best_words:
         """
+        print("BayesClassifier is training ...... ")
+
         # get the frequency information of each word
         total_pos_data, total_neg_data = {}, {}
         total_pos_length, total_neg_length = 0, 0
@@ -625,6 +631,8 @@ class BayesClassifier:
         for word in total_word:
             self.__pos_word_p[word] = np.log(total_pos_data.get(word, 1e-100) / total_pos_length)
             self.__neg_word_p[word] = np.log(total_neg_data.get(word, 1e-100) / total_neg_length)
+
+        print("BayesClassifier trains over!")
 
     def classify(self, input_data):
         """
@@ -681,6 +689,8 @@ class MaxEntClassifier:
         return True
 
     def train(self, train_data, train_data_labels, best_words=None, max_iter=50):
+        print("MaxEntClassifier is training ...... ")
+
         # init the parameters
         train_data_length = len(train_data_labels)
         if best_words is None:
@@ -701,8 +711,6 @@ class MaxEntClassifier:
             self.feats[f] = i  # each feature function correspond to id
 
         for i in range(max_iter):
-            print("iter: %d" % (i + 1))
-
             ep_model = [0.0] * len(self.feats)  # feature expectation on model distribution
             for doc in train_data:
                 prob = self.calculate_probability(doc)  # calculate p(y|x)
@@ -724,6 +732,8 @@ class MaxEntClassifier:
             if self.convergence(last_weight):
                 print("The program convergence. The iter number: %d." % (i + 1))
                 break
+
+        print("MaxEntClassifier trains over!")
 
     def classify(self, the_input_features):
         prob = self.calculate_probability(the_input_features)
@@ -750,6 +760,8 @@ class SVMClassifier:
         self.__train(train_data, train_labels)
 
     def __train(self, train_data, train_labels):
+        print("SVMClassifier is training ...... ")
+
         train_bunch = Bunch(label=[], contents=[], filenames=[])
 
         i = 0
@@ -766,6 +778,8 @@ class SVMClassifier:
 
         self.clf = LinearSVC()
         self.clf.fit(self.train_space.tdm, self.train_space.label)
+
+        print("SVMClassifier trains over!")
 
     def test(self, test_data, test_labels):
         test_bunch = Bunch(label=[], contents=[], filenames=[])
@@ -795,4 +809,79 @@ class SVMClassifier:
         test_space.vocabulary = self.train_space.vocabulary
         prediction = self.clf.predict(test_space.tdm)
 
-        return prediction
+        return prediction[0]
+
+
+# ################################################
+# classifier based on Support Vector Machine
+# ################################################
+class MultipleClassifiers:
+    def __init__(self, train_data, train_labels, best_words, knn_k, maxent_iter):
+        self.knn_k = knn_k
+        self.maxent_iter = maxent_iter
+
+        self.dc = None
+        self.knn = None
+        self.bayes = None
+        self.maxent = None
+        self.svm = None
+
+        # each classifier's negative and positive precision
+        self.dc_precision = [0.8048533873, 0.7982195846]
+        self.knn_precision = [0.681914145, 0.9464594128]
+        self.bayes_precision = [0.7540453074, 0.9109947644]
+        self.maxent_precision = [0.8575367647, 0.926535087]
+        self.svm_precision = [0.8384754991, 0.9153674833]
+
+        self.__train(train_data, train_labels, best_words)
+
+    def __train(self, train_data, train_labels, best_words=None):
+        print("MultipleClassifiers is training ...... ")
+
+        self.dc = DictClassifier()
+        self.knn = KNNClassifier(train_data, train_labels, self.knn_k, best_words)
+        self.bayes = BayesClassifier(train_data, train_labels, best_words)
+        self.maxent = MaxEntClassifier(train_data, train_labels, best_words, self.maxent_iter)
+        self.svm = SVMClassifier(train_data, train_labels)
+
+        print("MultipleClassifiers trains over!")
+
+    def classify(self, data):
+        results_num = [0, 0]
+        results_prob = [0, 0]
+
+        # the classify result of DictClassifier
+        label = self.dc.classify("".join(data))
+        results_num[label] += 1
+        results_prob[label] += self.dc_precision[label]
+
+        # the classify result of KNNClassifier
+        label = self.knn.multiple_k_classify(data)
+        results_num[label] += 1
+        results_prob[label] += self.dc_precision[label]
+
+        # the classify result of BayesClassifier
+        label = self.bayes.classify(data)
+        results_num[label] += 1
+        results_prob[label] += self.dc_precision[label]
+
+        # the classify result of MaxEntClassifier
+        label = self.maxent.classify(data)
+        results_num[label] += 1
+        results_prob[label] += self.dc_precision[label]
+
+        # the classify result of SVMClassifier
+        label = self.svm.classify(data)
+        results_num[label] += 1
+        results_prob[label] += self.dc_precision[label]
+
+        if results_num[0] == 0:
+            return 1
+        elif results_num[1] == 0:
+            return 0
+        else:
+            results = [results_prob[0] / results_num[0], results_prob[1] / results_num[1]]
+            if results[0] > results[1]:
+                return 0
+            else:
+                return 1
