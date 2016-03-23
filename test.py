@@ -142,16 +142,19 @@ def test_multiple_classifiers():
     max_iter = 800
     k = [1, 3, 5, 7, 9, 11, 13]
     # k = [21, 25, 29, 33, 37, 41, 45]
+    prob = False
 
     mc = MultipleClassifiers(train_data, train_labels, best_words, k, max_iter)
 
     classify_labels = []
     for data in test_data:
-        classify_labels.append(mc.classify(data))
+        # classify_labels.append(mc.classify(data, prob))
+        classify_labels.append(mc.classify(data, prob))
 
-    filepath = "runout/MultipleClassifiers-pos_train-%d-neg_train-%d-pos_test-%d-neg_test-%d-k-%s-iter-%d-%s.xls" % (
-        pos_train_num, neg_train_num, pos_test_num, neg_test_num, "_".join([str(i) for i in k]),
-        max_iter, datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
+    filepath = "runout/MultipleClassifiers-pos_train-%d-neg_train-%d-pos_test-%d-neg_test-%d-k-%s-iter-%d-prob-%s" \
+               "-%s.xls" % (pos_train_num, neg_train_num, pos_test_num, neg_test_num, "_".join([str(i) for i in k]),
+                            max_iter, "True" if prob else "False",
+                            datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
     get_accuracy(test_labels, classify_labels, parameters, filepath)
 
 

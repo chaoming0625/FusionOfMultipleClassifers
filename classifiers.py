@@ -846,42 +846,54 @@ class MultipleClassifiers:
 
         print("MultipleClassifiers trains over!")
 
-    def classify(self, data):
+    def classify(self, data, prob=False):
         results_num = [0, 0]
-        results_prob = [0, 0]
+        if prob:
+            results_prob = [0, 0]
 
         # the classify result of DictClassifier
         label = self.dc.classify("".join(data))
         results_num[label] += 1
-        results_prob[label] += self.dc_precision[label]
+        if prob:
+            results_prob[label] += self.dc_precision[label]
 
         # the classify result of KNNClassifier
         label = self.knn.multiple_k_classify(data)
         results_num[label] += 1
-        results_prob[label] += self.dc_precision[label]
+        if prob:
+            results_prob[label] += self.dc_precision[label]
 
         # the classify result of BayesClassifier
         label = self.bayes.classify(data)
         results_num[label] += 1
-        results_prob[label] += self.dc_precision[label]
+        if prob:
+            results_prob[label] += self.dc_precision[label]
 
         # the classify result of MaxEntClassifier
         label = self.maxent.classify(data)
         results_num[label] += 1
-        results_prob[label] += self.dc_precision[label]
+        if prob:
+            results_prob[label] += self.dc_precision[label]
 
         # the classify result of SVMClassifier
         label = self.svm.classify(data)
         results_num[label] += 1
-        results_prob[label] += self.dc_precision[label]
+        if prob:
+            results_prob[label] += self.dc_precision[label]
 
-        if results_num[0] == 0:
-            return 1
-        elif results_num[1] == 0:
-            return 0
+        if prob:
+            if results_num[0] == 0:
+                return 1
+            elif results_num[1] == 0:
+                return 0
+            else:
+                results = [results_prob[0] / results_num[0], results_prob[1] / results_num[1]]
+                if results[0] > results[1]:
+                    return 0
+                else:
+                    return 1
         else:
-            results = [results_prob[0] / results_num[0], results_prob[1] / results_num[1]]
-            if results[0] > results[1]:
+            if results_num[0] > results_num[1]:
                 return 0
             else:
                 return 1
