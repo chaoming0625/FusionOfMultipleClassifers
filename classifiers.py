@@ -116,8 +116,8 @@ class DictClassifier:
             i = 0
             while i < len(seg_result):
                 if seg_result[i].word in match_result:
-                    if i+1 == len(seg_result) or seg_result[i+1].word in match_result:
-                        del(seg_result[i])
+                    if i + 1 == len(seg_result) or seg_result[i + 1].word in match_result:
+                        del (seg_result[i])
                         continue
                 i += 1
 
@@ -162,7 +162,7 @@ class DictClassifier:
             to_compile = a_phrase["key"].replace("……", "[\u4e00-\u9fa5]*")
 
             if "start" in keys:
-                to_compile = to_compile.replace("*", "{"+a_phrase["start"]+","+a_phrase["end"]+"}")
+                to_compile = to_compile.replace("*", "{" + a_phrase["start"] + "," + a_phrase["end"] + "}")
             if "head" in keys:
                 to_compile = a_phrase["head"] + to_compile
 
@@ -178,13 +178,13 @@ class DictClassifier:
                     for i in range(len(seg_result)):
                         if seg_result[i].word in match.group():
                             try:
-                                if seg_result[i+1].word in match.group():
+                                if seg_result[i + 1].word in match.group():
                                     return self.__emotional_word_analysis(
-                                        a_phrase["key"]+":"+match.group(), a_phrase["value"],
+                                        a_phrase["key"] + ":" + match.group(), a_phrase["value"],
                                         [x for x, y in seg_result], i)
                             except IndexError:
                                 return self.__emotional_word_analysis(
-                                    a_phrase["key"]+":"+match.group(), a_phrase["value"],
+                                    a_phrase["key"] + ":" + match.group(), a_phrase["value"],
                                     [x for x, y in seg_result], i)
         return ""
 
@@ -328,7 +328,7 @@ class DictClassifier:
 
         for i in range(len(comment_analysis) - 1):
             output += "Sub-clause" + str(i) + ": "
-            clause = comment_analysis["su-clause"+str(i)]
+            clause = comment_analysis["su-clause" + str(i)]
             if len(clause["conjunction"]) > 0:
                 output += "conjunction:"
                 for punctuation in clause["conjunction"]:
@@ -481,7 +481,7 @@ class KNNClassifier:
         length = sum(the_vector)
         if length == 0:
             return [0 for _ in the_vector]
-        return [i/length for i in the_vector]
+        return [i / length for i in the_vector]
 
     def __get_total_words(self, train_data, best_words):
         if best_words is not None:
@@ -677,14 +677,14 @@ class MaxEntClassifier:
         weights = [(self.prob_weight(features, label), label) for label in self.labels]
         try:
             z = sum([weight for weight, label in weights])
-            prob = [(weight/z, label) for weight, label in weights]
+            prob = [(weight / z, label) for weight, label in weights]
         except ZeroDivisionError:
             return "collapse"
         return prob
 
     def convergence(self, last_weight):
         for w1, w2 in zip(last_weight, self.weight):
-            if abs(w1-w2) >= 0.0001:
+            if abs(w1 - w2) >= 0.0001:
                 return False
         return True
 
@@ -813,23 +813,19 @@ class SVMClassifier:
 
 
 # ################################################
-# classifier based on Support Vector Machine
+# classifier based on Multiple Classifiers
 # ################################################
 class MultipleClassifiers:
-    def __init__(self, train_data, train_labels, best_words, knn_k, maxent_iter):
-        self.knn_k = knn_k
+    def __init__(self, train_data, train_labels, best_words, maxent_iter):
         self.maxent_iter = maxent_iter
 
-        self.dc = None
         self.knn = None
         self.bayes = None
         self.maxent = None
         self.svm = None
 
         # each classifier's negative and positive precision
-        self.dc_precision = [0.8048533873, 0.7982195846]
-        self.knn_precision = [0.681914145, 0.9464594128]
-        self.bayes_precision = [0.7540453074, 0.9109947644]
+        self.bayes_precision = [0.754, 0.911]
         self.maxent_precision = [0.8575367647, 0.926535087]
         self.svm_precision = [0.8384754991, 0.9153674833]
 
@@ -838,8 +834,7 @@ class MultipleClassifiers:
     def __train(self, train_data, train_labels, best_words=None):
         print("MultipleClassifiers is training ...... ")
 
-        self.dc = DictClassifier()
-        self.knn = KNNClassifier(train_data, train_labels, self.knn_k, best_words)
+        self.knn = KNNClassifier(train_data, train_labels, k=1, best_words=best_words)
         self.bayes = BayesClassifier(train_data, train_labels, best_words)
         self.maxent = MaxEntClassifier(train_data, train_labels, best_words, self.maxent_iter)
         self.svm = SVMClassifier(train_data, train_labels)
@@ -847,39 +842,32 @@ class MultipleClassifiers:
         print("MultipleClassifiers trains over!")
 
     def classify(self, data, prob=False):
+        # if
+        label = self.knn.single_k_classify(data)
+        if label:
+            return label
+
         results_num = [0, 0]
         if prob:
             results_prob = [0, 0]
-
-        # the classify result of DictClassifier
-        label = self.dc.classify("".join(data))
-        results_num[label] += 1
-        if prob:
-            results_prob[label] += self.dc_precision[label]
-
-        # the classify result of KNNClassifier
-        label = self.knn.multiple_k_classify(data)
-        results_num[label] += 1
-        if prob:
-            results_prob[label] += self.dc_precision[label]
 
         # the classify result of BayesClassifier
         label = self.bayes.classify(data)
         results_num[label] += 1
         if prob:
-            results_prob[label] += self.dc_precision[label]
+            results_prob[label] += self.bayes_precision[label]
 
         # the classify result of MaxEntClassifier
         label = self.maxent.classify(data)
         results_num[label] += 1
         if prob:
-            results_prob[label] += self.dc_precision[label]
+            results_prob[label] += self.maxent_precision[label]
 
         # the classify result of SVMClassifier
         label = self.svm.classify(data)
         results_num[label] += 1
         if prob:
-            results_prob[label] += self.dc_precision[label]
+            results_prob[label] += self.svm_precision[label]
 
         if prob:
             if results_num[0] == 0:

@@ -1,4 +1,5 @@
 from tools import get_accuracy
+import datetime
 
 
 def test_dict():
@@ -41,11 +42,10 @@ def test_knn():
     print("---" * 45)
 
     from classifiers import KNNClassifier
-    k = [1, 3, 5, 7, 9, 11, 13]
-    k = [21, 25, 29, 33, 37, 41, 45]
-    k = 37
+    # k = [1, 3, 5, 7, 9, 11, 13]
+    # k = [21, 25, 29, 33, 37, 41, 45]
+    k = 45
     knn = KNNClassifier(train_data, train_labels, k=k, best_words=best_words)
-    # knn = KNNClassifier(train_data, train_labels, k=3)
 
     classify_labels = []
 
@@ -57,7 +57,7 @@ def test_knn():
     #            "-%s.xls" % (pos_train_num, neg_train_num, pos_test_num, neg_test_num, feature_num,
     #                         "_".join([str(i) for i in k]), datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
 
-    filepath = "runout/KNNClassifier-pos_train-%d-neg_train-%d-pos_test-%d-neg_test-%d-feature-%d-multiple_k-%s-" \
+    filepath = "runout/KNNClassifier-pos_train-%d-neg_train-%d-pos_test-%d-neg_test-%d-feature-%d-k-%s-" \
                "%s.xls" % (pos_train_num, neg_train_num, pos_test_num, neg_test_num, feature_num, str(k),
                            datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
     get_accuracy(test_labels, classify_labels, parameters, filepath)
@@ -116,8 +116,6 @@ def test_svm():
     from classifiers import SVMClassifier
     svm = SVMClassifier(train_data, train_labels)
 
-    # classify_labels = [int(p) for p in svm.test(test_data, test_labels)]
-
     classify_labels = []
 
     for data in test_data:
@@ -140,27 +138,23 @@ def test_multiple_classifiers():
 
     # get the instance of classifiers
     max_iter = 800
-    k = [1, 3, 5, 7, 9, 11, 13]
-    # k = [21, 25, 29, 33, 37, 41, 45]
-    prob = False
+    # prob = False
+    prob = True
 
-    mc = MultipleClassifiers(train_data, train_labels, best_words, k, max_iter)
+    mc = MultipleClassifiers(train_data, train_labels, best_words, max_iter)
 
     classify_labels = []
     for data in test_data:
-        # classify_labels.append(mc.classify(data, prob))
         classify_labels.append(mc.classify(data, prob))
 
-    filepath = "runout/MultipleClassifiers-pos_train-%d-neg_train-%d-pos_test-%d-neg_test-%d-k-%s-iter-%d-prob-%s" \
-               "-%s.xls" % (pos_train_num, neg_train_num, pos_test_num, neg_test_num, "_".join([str(i) for i in k]),
+    filepath = "runout/MultipleClassifiers-pos_train-%d-neg_train-%d-pos_test-%d-neg_test-%d-k-1-iter-%d-prob-%s" \
+               "-%s.xls" % (pos_train_num, neg_train_num, pos_test_num, neg_test_num,
                             max_iter, "True" if prob else "False",
                             datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
     get_accuracy(test_labels, classify_labels, parameters, filepath)
 
 
 if __name__ == "__main__":
-    import datetime
-
     pos_train_num = neg_train_num = 3500
     pos_test_num = neg_test_num = 1000
     feature_num = 4000
@@ -183,7 +177,7 @@ if __name__ == "__main__":
     # test_dict()
 
     # test knn
-    # test_knn()
+    test_knn()
 
     # test bayes
     # test_bayes()
@@ -196,3 +190,6 @@ if __name__ == "__main__":
 
     # test multiple_classifiers
     # test_multiple_classifiers()
+
+
+

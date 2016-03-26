@@ -87,15 +87,15 @@ def get_accuracy(origin_labels, classify_labels, parameters, output_filepath=Non
     neg_f1 = 2 * neg_precision * neg_recall / (neg_precision + neg_recall)
     xls_contents.extend([("neg-precision", neg_precision), ("neg-recall", neg_recall), ("neg-f1", neg_f1)])
 
-    total_precision = (neg_right + pos_right) / (neg_right + neg_false + pos_right + pos_false) * 100
-    xls_contents.append(("total-precision", total_precision))
+    total_recall = (neg_right + pos_right) / (neg_right + neg_false + pos_right + pos_false) * 100
+    xls_contents.append(("total-recall", total_recall))
 
     print("    pos-right\tpos-false\tneg-right\tneg-false\tpos-precision\tpos-recall\t"
-          "pos-f1\tneg-precision\tneg-recall\tneg-f1\ttotal-precision")
+          "pos-f1\tneg-precision\tneg-recall\tneg-f1\ttotal-recall")
     print("    " + "---" * 45)
     print("    %8d\t%8d\t%8d\t%8d\t%8.4f\t%8.4f\t%8.4f\t%8.4f\t%8.4f\t%8.4f\t%8.4f" %
           (pos_right, pos_false, neg_right, neg_false, pos_precision, pos_recall,
-           pos_f1, neg_precision, neg_recall, neg_f1, total_precision))
+           pos_f1, neg_precision, neg_recall, neg_f1, total_recall))
 
     if output_filepath:
         Write2File.write_xls(output_filepath, xls_contents)
