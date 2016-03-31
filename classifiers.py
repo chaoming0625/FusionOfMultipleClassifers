@@ -468,6 +468,7 @@ class KNNClassifier:
         self.__stopwords = stopwords
         self.__train_data_vectors = None
         self.__total_words_length = 0
+        self.train_num = 0
         if train_data is not None:
             self.__train(train_data, train_data_labels, best_words)
 
@@ -516,6 +517,7 @@ class KNNClassifier:
         vectors = []
         for doc in train_data:
             vectors.append(self.__doc2vector(doc))
+            self.train_num += 1
 
         self.__train_data_vectors = np.array(vectors)
         # self.__train_data_vectors = self.__normalize(np.array(vectors))
@@ -531,7 +533,16 @@ class KNNClassifier:
         sq_distances = sq_diff_mat.sum(axis=1)
         distances = sq_distances ** 0.5
         sorted_distances = distances.argsort()
+
         return sorted_distances
+
+    def classify(self, input_data):
+        if isinstance(self.__k, int):
+            return self.single_k_classify(input_data)
+        elif isinstance(self.__k, list):
+            return self.multiple_k_classify(input_data)
+        else:
+            print("Wrong k.")
 
     def multiple_k_classify(self, input_data):
         # get the distance sorted list
@@ -767,7 +778,7 @@ class SVMClassifier:
         i = 0
         for data in train_data:
             train_bunch.label.append(train_labels[i])
-            train_bunch.contents.append(" ".join(data))
+            train_bunch.contents.append(data)
             train_bunch.filenames.append("train-line-%d" % i)
             i += 1
 
@@ -786,7 +797,7 @@ class SVMClassifier:
         i = 0
         for data in test_data:
             test_bunch.label.append(test_labels[i])
-            test_bunch.contents.append(" ".join(data))
+            test_bunch.contents.append(data)
             test_bunch.filenames.append("test-line-%d" % i)
             i += 1
 
@@ -800,7 +811,7 @@ class SVMClassifier:
 
     def classify(self, data):
         test_bunch = Bunch(contents=[], filenames=[])
-        test_bunch.contents.append(" ".join(data))
+        test_bunch.contents.append(data)
         test_bunch.filenames.append("test-line")
 
         test_space = Bunch(filenames=test_bunch.filenames, edm=[], vocabulary={})
@@ -815,9 +826,10 @@ class SVMClassifier:
 # ################################################
 # classifier based on Multiple Classifiers
 # ################################################
-class MultipleClassifiers:
-    def __init__(self, train_data, train_labels, best_words, maxent_iter):
+class WaiMaiMultipleClassifiers:
+    def __init__(self, train_data, train_labels, best_words, maxent_iter, knn=False):
         self.maxent_iter = maxent_iter
+        self.knn_need = knn
 
         self.knn = None
         self.bayes = None
@@ -825,27 +837,27 @@ class MultipleClassifiers:
         self.svm = None
 
         # each classifier's negative and positive precision
-        self.bayes_precision = [0.754, 0.911]
-        self.maxent_precision = [0.8575367647, 0.926535087]
+        self.bayes_precision = [0.755267423, 0.911227154]
+        self.maxent_precision = [0.8584558824, 0.9276315789]
         self.svm_precision = [0.8384754991, 0.9153674833]
 
         self.__train(train_data, train_labels, best_words)
 
     def __train(self, train_data, train_labels, best_words=None):
         print("MultipleClassifiers is training ...... ")
-
-        self.knn = KNNClassifier(train_data, train_labels, k=1, best_words=best_words)
+        if self.knn_need:
+            self.knn = KNNClassifier(train_data, train_labels, k=1, best_words=best_words)
         self.bayes = BayesClassifier(train_data, train_labels, best_words)
         self.maxent = MaxEntClassifier(train_data, train_labels, best_words, self.maxent_iter)
-        self.svm = SVMClassifier(train_data, train_labels)
+        self.svm = SVMClassifier([" ". join(data) for data in train_data], train_labels)
 
         print("MultipleClassifiers trains over!")
 
     def classify(self, data, prob=False):
-        # if
-        label = self.knn.single_k_classify(data)
-        if label:
-            return label
+        if self.knn_need:
+            label = self.knn.single_k_classify(data)
+            if label:
+                return label
 
         results_num = [0, 0]
         if prob:
@@ -864,7 +876,83 @@ class MultipleClassifiers:
             results_prob[label] += self.maxent_precision[label]
 
         # the classify result of SVMClassifier
-        label = self.svm.classify(data)
+        label = self.svm.classify(" ". join(data))
+        results_num[label] += 1
+        if prob:
+            results_prob[label] += self.svm_precision[label]
+
+        if prob:
+            if results_num[0] == 0:
+                return 1
+            elif results_num[1] == 0:
+                return 0
+            else:
+                results = [results_prob[0] / results_num[0], results_prob[1] / results_num[1]]
+                if results[0] > results[1]:
+                    return 0
+                else:
+                    return 1
+        else:
+            if results_num[0] > results_num[1]:
+                return 0
+            else:
+                return 1
+
+
+# ################################################
+# classifier based on Multiple Classifiers
+# ################################################
+class MovieMultipleClassifiers:
+    def __init__(self, train_data, train_labels, best_words, maxent_iter, precisions, knn=False):
+        self.maxent_iter = maxent_iter
+        self.knn_need = knn
+
+        self.knn = None
+        self.bayes = None
+        self.maxent = None
+        self.svm = None
+
+        # each classifier's negative and positive precision
+        self.bayes_precision = [0.7397769517, 0.9923664122]
+        self.maxent_precision = [0.7939914163, 0.9101796407]
+        self.svm_precision = [0.7299270073, 1]
+
+        self.__train(train_data, train_labels, best_words)
+
+    def __train(self, train_data, train_labels, best_words=None):
+        print("MultipleClassifiers is training ...... ")
+        if self.knn_need:
+            self.knn = KNNClassifier(train_data, train_labels, k=1, best_words=best_words)
+        self.bayes = BayesClassifier(train_data, train_labels, best_words)
+        self.maxent = MaxEntClassifier(train_data, train_labels, best_words, self.maxent_iter)
+        self.svm = SVMClassifier(["". join(data) for data in train_data], train_labels)
+
+        print("MultipleClassifiers trains over!")
+
+    def classify(self, data, prob=False):
+        if self.knn_need:
+            label = self.knn.single_k_classify(data)
+            if label:
+                return label
+
+        results_num = [0, 0]
+        if prob:
+            results_prob = [0, 0]
+
+        # the classify result of BayesClassifier
+        label = self.bayes.classify(data)
+        results_num[label] += 1
+        if prob:
+            results_prob[label] += self.bayes_precision[label]
+
+        # the classify result of MaxEntClassifier
+        label = self.maxent.classify(data)
+        results_num[label] += 1
+        if prob:
+            results_prob[label] += self.maxent_precision[label]
+
+        # the classify result of SVMClassifier
+        label = self.svm.classify("".join(data))
         results_num[label] += 1
         if prob:
             results_prob[label] += self.svm_precision[label]

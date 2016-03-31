@@ -1,4 +1,5 @@
 import re
+import os
 import time
 from datetime import datetime
 from selenium.webdriver import Firefox
@@ -132,6 +133,167 @@ class BaiDuWaiMaiCrawler:
     def test(self):
         self.get_shop_ids_from_file("files/baiduwaimai_shop_urls.txt")
         self.get_all_shop_comments()
+
+
+def get_pos_and_neg_corpus():
+    """
+    get the positive and negative corpus_ according to the command mark
+    """
+    def string_is_too_short(a_string):
+        """
+        judge if the corpus_ is too short or the chinese characters are few
+        if True, write to the abandoned file
+        :param a_string: a corpus_
+        :return: True or False
+        """
+        if len(a_string) < 5:
+            write_into_rubbish_corpus_file("Too short:", a_string)
+            return True
+        if len(re.findall(r'[\u4e00-\u9fa5]', a_string)) <= len(a_string) * 0.4:
+            write_into_rubbish_corpus_file("Few words:", a_string)
+            return True
+        return False
+
+    def string_is_numeric(a_string):
+        """
+        judge if the corpus_'s characters are all or almost numbers
+        if True, write to the abandoned file
+        :param a_string: a corpus_
+        :return: True or False
+        """
+        match = (re.match(r'\d+', a_string))
+        if match is not None and len(match.group()) >= len(a_string) * 0.75:
+            write_into_rubbish_corpus_file("Is numeric:", a_string)
+            return True
+        return False
+
+    def string_is_english(a_string):
+        """
+        judge if the corpus_'s characters are all English
+        if True, write to the abandoned file
+        :param a_string: a corpus_
+        :return: True or False
+        """
+        match = re.match(r"[a-zA-Z]+", a_string)
+        if match is not None and len(match.group()) >= len(a_string) * 0.75:
+            write_into_rubbish_corpus_file("Is english:", a_string)
+            return True
+        return False
+
+    def string_is_word_repeat(a_string):
+        """
+        check if the corpus_ is always the repeat word
+        :param a_string: a corpus_
+        :return: True or False
+        """
+        repeat_words, length = [], 0
+        for word in a_string:
+            if a_string.count(word) >= 4 and word not in repeat_words:
+                repeat_words.append(word)
+                length += content.count(word)
+        if length > len(content) / 2:
+            write_into_rubbish_corpus_file("Word repeat:", a_string)
+            return True
+        return False
+
+    def string_is_sentence_repeat(filepath, a_string):
+        """
+        judge if the string is the same as the another string in the lines
+        :param filepath: file path
+        :param a_string: a corpus_
+        :return: True or False
+        """
+        repeat = False
+        with open(filepath, "r", encoding="utf-8") as check_f:
+            for a_line in check_f:
+                if a_line.strip() in a_string and len(a_line.strip()) * 2 >= len(a_string):
+                    repeat = True
+                if a_string in a_line.strip() and len(a_string) * 2 >= len(a_line.strip()):
+                    repeat = True
+                if repeat:
+                    write_into_rubbish_corpus_file("Sentence repeat:", a_string)
+                    write_into_rubbish_corpus_file("Sentence repeat:", a_line.strip())
+                    break
+        return repeat
+
+    def write_into_rubbish_corpus_file(type_string, a_string):
+        """
+        write the corpus_ into the rubbish corpus_ file
+        :param type_string: the rubbish type
+        :param a_string: a corpus_
+        """
+        with open(abandoned_filepath, "a", encoding="utf-8") as abandoned_f:
+            abandoned_f.write(type_string + "\n\t" + str(a_string) + "\n")
+
+    def write_into_corpus_file(filepath, a_string):
+        """
+        write the corpus_ into the corresponding file if there is no repeat,
+        otherwise, write it into the abandoned file
+        :param filepath: file path
+        :param a_string: a corpus_
+        """
+        repeat = string_is_sentence_repeat(filepath, a_string)
+        if not repeat:
+            with open(filepath, "a", encoding="utf-8") as final_corpus_f:
+                final_corpus_f.write(str(a_string) + "\n")
+
+    waimai_corpus_root_path = "waimai/2015-11-05/"
+    abandoned_filepath = "waimai/abandoned/abandoned_corpus.txt"
+    positive_filepath = "waimai/pos/positive_corpus_v2.txt"
+    negative_filepath = "waimai/neg/negative_corpus_v2.txt"
+    four_mark_filepath = "waimai/handle/four_mark_corpus.txt"
+    runout_filepath = "runout/get_waimai_pos_and_neg_corpus.txt"
+
+    open(abandoned_filepath, "w", encoding="utf-8")
+    open(positive_filepath, "w", encoding="utf-8")
+    open(negative_filepath, "w", encoding="utf-8")
+    open(four_mark_filepath, "w", encoding="utf-8")
+
+    start_time = time.clock()
+    total_index, useful_index = 0, 0
+    for filename in os.listdir(waimai_corpus_root_path):
+        if "comment" in filename:
+            with open(waimai_corpus_root_path+filename, "r", encoding="utf-8") as corpus_f:
+                for line in corpus_f:
+                    total_index += 1
+                    print("finish the number of %d corpus_ in total." % total_index)
+
+                    a_comment = json.loads(line.strip())
+                    content = ",".join(re.split(r"\s+", a_comment["content"]))
+
+                    if string_is_too_short(content):
+                        continue
+                    if string_is_numeric(content):
+                        continue
+                    if string_is_english(content):
+                        continue
+                    if string_is_word_repeat(content):
+                        continue
+
+                    try:
+                        mark = int("".join(re.findall("\d+", a_comment["mark"])))
+
+                        if mark == 5:
+                            write_into_corpus_file(positive_filepath, content)
+
+                        if mark == 4:
+                            write_into_corpus_file(four_mark_filepath, content)
+
+                        if mark <= 3:
+                            write_into_corpus_file(negative_filepath, content)
+
+                        useful_index += 1
+                        print("finish the number of %d corpus_ useful." % useful_index)
+                    except ValueError:
+                        write_into_rubbish_corpus_file("ValueError:", a_comment)
+
+    end_time = time.clock()
+    with open(runout_filepath, "w", encoding="utf-8") as runout_f:
+        runout_f.write("total corpus_: %d\n" % total_index)
+        runout_f.write("useful corpus_: %d\n" % useful_index)
+        runout_f.write("time used: " + str(end_time - start_time))
+
+
 
 if __name__ == "__main__":
     crawler = BaiDuWaiMaiCrawler()

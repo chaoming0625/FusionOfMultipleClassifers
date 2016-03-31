@@ -1,6 +1,6 @@
 from tools import get_accuracy
 import datetime
-from waimai import WaimaiCorpus
+from corpus import WaimaiCorpus
 from classifiers import KNNClassifier
 from feature_extraction import ChiSquare
 from multiprocessing import Process
@@ -34,7 +34,7 @@ pos_test_num = neg_test_num = 1125
 feature_num = 3000
 parameters = [pos_train_num, neg_train_num, pos_test_num, neg_test_num, feature_num]
 
-# get the corpus
+# get the corpus_
 corpus = WaimaiCorpus()
 train_data, train_labels = corpus.get_train_corpus(pos_train_num, neg_train_num)
 test_data, test_labels = corpus.get_test_corpus(pos_test_num, neg_test_num)
