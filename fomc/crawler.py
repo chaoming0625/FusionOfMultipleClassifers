@@ -137,13 +137,13 @@ class BaiDuWaiMaiCrawler:
 
 def get_pos_and_neg_corpus():
     """
-    get the positive and negative corpus_ according to the command mark
+    get the positive and negative f_corpus according to the command mark
     """
     def string_is_too_short(a_string):
         """
-        judge if the corpus_ is too short or the chinese characters are few
+        judge if the f_corpus is too short or the chinese characters are few
         if True, write to the abandoned file
-        :param a_string: a corpus_
+        :param a_string: a f_corpus
         :return: True or False
         """
         if len(a_string) < 5:
@@ -156,9 +156,9 @@ def get_pos_and_neg_corpus():
 
     def string_is_numeric(a_string):
         """
-        judge if the corpus_'s characters are all or almost numbers
+        judge if the f_corpus's characters are all or almost numbers
         if True, write to the abandoned file
-        :param a_string: a corpus_
+        :param a_string: a f_corpus
         :return: True or False
         """
         match = (re.match(r'\d+', a_string))
@@ -169,9 +169,9 @@ def get_pos_and_neg_corpus():
 
     def string_is_english(a_string):
         """
-        judge if the corpus_'s characters are all English
+        judge if the f_corpus's characters are all English
         if True, write to the abandoned file
-        :param a_string: a corpus_
+        :param a_string: a f_corpus
         :return: True or False
         """
         match = re.match(r"[a-zA-Z]+", a_string)
@@ -182,8 +182,8 @@ def get_pos_and_neg_corpus():
 
     def string_is_word_repeat(a_string):
         """
-        check if the corpus_ is always the repeat word
-        :param a_string: a corpus_
+        check if the f_corpus is always the repeat word
+        :param a_string: a f_corpus
         :return: True or False
         """
         repeat_words, length = [], 0
@@ -200,7 +200,7 @@ def get_pos_and_neg_corpus():
         """
         judge if the string is the same as the another string in the lines
         :param filepath: file path
-        :param a_string: a corpus_
+        :param a_string: a f_corpus
         :return: True or False
         """
         repeat = False
@@ -218,19 +218,19 @@ def get_pos_and_neg_corpus():
 
     def write_into_rubbish_corpus_file(type_string, a_string):
         """
-        write the corpus_ into the rubbish corpus_ file
+        write the f_corpus into the rubbish f_corpus file
         :param type_string: the rubbish type
-        :param a_string: a corpus_
+        :param a_string: a f_corpus
         """
         with open(abandoned_filepath, "a", encoding="utf-8") as abandoned_f:
             abandoned_f.write(type_string + "\n\t" + str(a_string) + "\n")
 
     def write_into_corpus_file(filepath, a_string):
         """
-        write the corpus_ into the corresponding file if there is no repeat,
+        write the f_corpus into the corresponding file if there is no repeat,
         otherwise, write it into the abandoned file
         :param filepath: file path
-        :param a_string: a corpus_
+        :param a_string: a f_corpus
         """
         repeat = string_is_sentence_repeat(filepath, a_string)
         if not repeat:
@@ -242,7 +242,7 @@ def get_pos_and_neg_corpus():
     positive_filepath = "waimai/pos/positive_corpus_v2.txt"
     negative_filepath = "waimai/neg/negative_corpus_v2.txt"
     four_mark_filepath = "waimai/handle/four_mark_corpus.txt"
-    runout_filepath = "runout/get_waimai_pos_and_neg_corpus.txt"
+    runout_filepath = "f_runout/get_waimai_pos_and_neg_corpus.txt"
 
     open(abandoned_filepath, "w", encoding="utf-8")
     open(positive_filepath, "w", encoding="utf-8")
@@ -256,7 +256,7 @@ def get_pos_and_neg_corpus():
             with open(waimai_corpus_root_path+filename, "r", encoding="utf-8") as corpus_f:
                 for line in corpus_f:
                     total_index += 1
-                    print("finish the number of %d corpus_ in total." % total_index)
+                    print("finish the number of %d f_corpus in total." % total_index)
 
                     a_comment = json.loads(line.strip())
                     content = ",".join(re.split(r"\s+", a_comment["content"]))
@@ -283,14 +283,14 @@ def get_pos_and_neg_corpus():
                             write_into_corpus_file(negative_filepath, content)
 
                         useful_index += 1
-                        print("finish the number of %d corpus_ useful." % useful_index)
+                        print("finish the number of %d f_corpus useful." % useful_index)
                     except ValueError:
                         write_into_rubbish_corpus_file("ValueError:", a_comment)
 
     end_time = time.clock()
     with open(runout_filepath, "w", encoding="utf-8") as runout_f:
-        runout_f.write("total corpus_: %d\n" % total_index)
-        runout_f.write("useful corpus_: %d\n" % useful_index)
+        runout_f.write("total f_corpus: %d\n" % total_index)
+        runout_f.write("useful f_corpus: %d\n" % useful_index)
         runout_f.write("time used: " + str(end_time - start_time))
 
 

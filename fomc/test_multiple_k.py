@@ -1,7 +1,7 @@
 from tools import get_accuracy
 import datetime
 from corpus import WaimaiCorpus
-from classifiers import KNNClassifier
+from fomc.classifiers import KNNClassifier
 from feature_extraction import ChiSquare
 from multiprocessing import Process
 
@@ -15,7 +15,7 @@ def process(k):
         for data in test_data:
             classify_labels.append(knn.multiple_k_classify(data))
 
-        filepath = "runout/KNNClassifier-pos_train-%d-neg_train-%d-pos_test-%d-neg_test-%d-feature-%d-multiple_k-%s" \
+        filepath = "f_runout/KNNClassifier-pos_train-%d-neg_train-%d-pos_test-%d-neg_test-%d-feature-%d-multiple_k-%s" \
                    "-%s.xls" % (pos_train_num, neg_train_num, pos_test_num, neg_test_num, feature_num,
                                 "_".join([str(i) for i in k]), datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
     elif isinstance(k, int):
@@ -23,7 +23,7 @@ def process(k):
         for data in test_data:
             classify_labels.append(knn.single_k_classify(data))
 
-        filepath = "runout/KNNClassifier-pos_train-%d-neg_train-%d-pos_test-%d-neg_test-%d-feature-%d-k-%d-" \
+        filepath = "f_runout/KNNClassifier-pos_train-%d-neg_train-%d-pos_test-%d-neg_test-%d-feature-%d-k-%d-" \
                    "%s.xls" % (pos_train_num, neg_train_num, pos_test_num, neg_test_num, feature_num, k,
                                datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
 

@@ -6,13 +6,13 @@ from collections import defaultdict
 
 
 # ################################################
-# classifier based on sentiment dict
+# classifier based on sentiment f_dict
 # ################################################
 class DictClassifier:
     def __init__(self):
-        self.__root_filepath = "dict/"
+        self.__root_filepath = "f_dict/"
 
-        jieba.load_userdict("dict/user.dict")  # 准备分词词典
+        jieba.load_userdict("f_dict/user.f_dict")  # 准备分词词典
 
         # 准备情感词典词典
         self.__phrase_dict = self.__get_phrase_dict()
@@ -758,73 +758,57 @@ class MaxEntClassifier:
 # ################################################
 # classifier based on Support Vector Machine
 # ################################################
-from sklearn.datasets.base import Bunch
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.svm import LinearSVC
+from sklearn.svm import SVC
 
 
 class SVMClassifier:
-    def __init__(self, train_data, train_labels):
-        self.train_space = None
-        self.test_space = None
-        self.clf = None
+    def __init__(self, train_data, train_labels, best_words, C):
+        train_data = np.array(train_data)
+        train_labels = np.array(train_labels)
+
+        self.best_words = best_words
+        self.clf = SVC(C=C)
         self.__train(train_data, train_labels)
+
+    def words2vector(self, all_data):
+        vectors = []
+        for data in all_data:
+            vector = []
+            for feature in self.best_words:
+                vector.append(data.count(feature))
+            vectors.append(vector)
+
+        vectors = np.array(vectors)
+        return vectors
 
     def __train(self, train_data, train_labels):
         print("SVMClassifier is training ...... ")
 
-        train_bunch = Bunch(label=[], contents=[], filenames=[])
+        train_vectors = self.words2vector(train_data)
 
-        i = 0
-        for data in train_data:
-            train_bunch.label.append(train_labels[i])
-            train_bunch.contents.append(data)
-            train_bunch.filenames.append("train-line-%d" % i)
-            i += 1
-
-        self.train_space = Bunch(label=train_bunch.label, filenames=train_bunch.filenames, tdm=[], vocabulary={})
-        tfidf = TfidfVectorizer(sublinear_tf=True, max_df=0.5)
-        self.train_space.tdm = tfidf.fit_transform(train_bunch.contents)
-        self.train_space.vocabulary = tfidf.vocabulary_
-
-        self.clf = LinearSVC()
-        self.clf.fit(self.train_space.tdm, self.train_space.label)
+        self.clf.fit(train_vectors, np.array(train_labels))
 
         print("SVMClassifier trains over!")
 
-    def test(self, test_data, test_labels):
-        test_bunch = Bunch(label=[], contents=[], filenames=[])
-        i = 0
-        for data in test_data:
-            test_bunch.label.append(test_labels[i])
-            test_bunch.contents.append(data)
-            test_bunch.filenames.append("test-line-%d" % i)
-            i += 1
-
-        test_space = Bunch(label=test_bunch.label, filenames=test_bunch.filenames, edm=[], vocabulary={})
-        tfidf = TfidfVectorizer(sublinear_tf=True, max_df=0.5, vocabulary=self.train_space.vocabulary)
-        test_space.tdm = tfidf.fit_transform(test_bunch.contents)
-        test_space.vocabulary = self.train_space.vocabulary
-        prediction = self.clf.predict(test_space.tdm)
-
-        return prediction
-
     def classify(self, data):
-        test_bunch = Bunch(contents=[], filenames=[])
-        test_bunch.contents.append(data)
-        test_bunch.filenames.append("test-line")
+        vector = self.words2vector([data])
 
-        test_space = Bunch(filenames=test_bunch.filenames, edm=[], vocabulary={})
-        tfidf = TfidfVectorizer(sublinear_tf=True, max_df=0.5, vocabulary=self.train_space.vocabulary)
-        test_space.tdm = tfidf.fit_transform(test_bunch.contents)
-        test_space.vocabulary = self.train_space.vocabulary
-        prediction = self.clf.predict(test_space.tdm)
+        prediction = self.clf.predict(vector)
 
         return prediction[0]
 
 
 # ################################################
 # classifier based on Multiple Classifiers
+# ################################################
+class MultipleClassifier:
+    def __init__(self, train_data, train_labels, best_words, ma):
+        pass
+
+
+
+# ################################################
+# WaiMai classifier based on Multiple Classifiers
 # ################################################
 class WaiMaiMultipleClassifiers:
     def __init__(self, train_data, train_labels, best_words, maxent_iter, knn=False):
@@ -900,7 +884,7 @@ class WaiMaiMultipleClassifiers:
 
 
 # ################################################
-# classifier based on Multiple Classifiers
+# Movie classifier based on Multiple Classifiers
 # ################################################
 class MovieMultipleClassifiers:
     def __init__(self, train_data, train_labels, best_words, maxent_iter, precisions, knn=False):

@@ -7,8 +7,8 @@ class MovieCorpus:
     def __init__(self):
         # get the root path
         root_path = os.path.dirname(os.path.abspath(__file__))
-        pos_root_path = os.path.join(root_path, "corpus_/movie/pos/")
-        neg_root_path = os.path.join(root_path, "corpus_/movie/neg/")
+        pos_root_path = os.path.join(root_path, "f_corpus/movie/pos/")
+        neg_root_path = os.path.join(root_path, "f_corpus/movie/neg/")
 
         pattern = re.compile(r"([\w'\"]+|[.,!?;])")
 
@@ -34,8 +34,8 @@ class MovieCorpus:
         self.neg_train_num = 0
         self.neg_test_num = 0
 
-        runout_content = "You are using the movie corpus_ version 0.9.\n"
-        runout_content += "There are total %d positive and %d negative corpus_." % \
+        runout_content = "You are using the movie f_corpus version 0.9.\n"
+        runout_content += "There are total %d positive and %d negative f_corpus." % \
                           (self.pos_doc_length, self.neg_doc_length)
         print(runout_content)
 
@@ -71,21 +71,21 @@ class MovieCorpus:
 
 class WaimaiCorpus:
     def __init__(self):
-        # load the jieba user.dict
+        # load the jieba user.f_dict
         root_path = os.path.dirname(os.path.abspath(__file__))
-        jieba.load_userdict(os.path.join(root_path, "dict/user.dict"))
+        jieba.load_userdict(os.path.join(root_path, "f_dict/user.dict"))
 
-        # get the positive corpus_ and length
+        # get the positive f_corpus and length
         self.pos_doc_list = []
-        with open(os.path.join(root_path, "corpus_/waimai/positive_corpus_v1.txt"), encoding="utf-8") as pos_f:
+        with open(os.path.join(root_path, "f_corpus/waimai/positive_corpus_v1.txt"), encoding="utf-8") as pos_f:
             for line in pos_f:
                 # self.pos_doc_list.append(list(set(jieba.lcut(line.strip()))))
                 self.pos_doc_list.append(jieba.lcut(line.strip()))
         self.pos_doc_length = len(self.pos_doc_list)
 
-        # get the negative corpus_ and length
+        # get the negative f_corpus and length
         self.neg_doc_list = []
-        with open(os.path.join(root_path, "corpus_/waimai/negative_corpus_v1.txt"), encoding="utf-8") as pos_f:
+        with open(os.path.join(root_path, "f_corpus/waimai/negative_corpus_v1.txt"), encoding="utf-8") as pos_f:
             for line in pos_f:
                 # self.neg_doc_list.append(list(set(jieba.lcut(line.strip()))))
                 self.neg_doc_list.append(jieba.lcut(line.strip()))
@@ -97,8 +97,8 @@ class WaimaiCorpus:
         self.pos_test_num = 0
         self.neg_test_num = 0
 
-        runout_content = "You are using the waimai corpus_ version 1.0.\n"
-        runout_content += "There are total %d positive and %d negative corpus_." % \
+        runout_content = "You are using the waimai f_corpus version 1.0.\n"
+        runout_content += "There are total %d positive and %d negative f_corpus." % \
                           (self.pos_doc_length, self.neg_doc_length)
         print(runout_content)
 
