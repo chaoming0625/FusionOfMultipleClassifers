@@ -100,3 +100,12 @@ def get_accuracy(origin_labels, classify_labels, parameters, output_filepath=Non
     if output_filepath:
         Write2File.write_xls(output_filepath, xls_contents)
 
+        wb = xlwt.Workbook()
+        sh = wb.add_sheet("temp")
+        for i in range(len(origin_labels)):
+            sh.write(i, 0, origin_labels[i])
+            sh.write(i, 1, int(classify_labels[i]))
+        wb.save(output_filepath.split(".")[0] + "_label.xls")
+    else:
+        return xls_contents
+

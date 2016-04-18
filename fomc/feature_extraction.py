@@ -34,7 +34,7 @@ class ChiSquare:
     def best_words(self, num, need_score=False):
         words = sorted(self.words.items(), key=lambda word_pair: word_pair[1], reverse=True)
         if need_score:
-            return [(word[0], word.total_score) for word in words[:num]]
+            return [word for word in words[:num]]
         else:
             return [word[0] for word in words[:num]]
 

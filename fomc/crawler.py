@@ -294,7 +294,6 @@ def get_pos_and_neg_corpus():
         runout_f.write("time used: " + str(end_time - start_time))
 
 
-
 if __name__ == "__main__":
     crawler = BaiDuWaiMaiCrawler()
     crawler.test()

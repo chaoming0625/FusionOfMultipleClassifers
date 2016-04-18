@@ -44,7 +44,7 @@ def test_knn():
     from fomc.classifiers import KNNClassifier
     # k = [1, 3, 5, 7, 9, 11, 13]
     # k = [21, 25, 29, 33, 37, 41, 45]
-    k = 3
+    k = 1
     knn = KNNClassifier(train_data, train_labels, k=k, best_words=best_words)
 
     classify_labels = []
@@ -82,6 +82,18 @@ def test_bayes():
         datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
 
     get_accuracy(test_labels, classify_labels, parameters, filepath)
+
+
+def test_maxent_iteration():
+    """
+    test the classifier based on Maximum Entropy
+    """
+    print("MaxEntClassifier")
+    print("---" * 45)
+
+    from fomc.classifiers import MaxEntClassifier
+    maxent = MaxEntClassifier(train_data, train_labels, best_words, max_iter,
+                              test=True, test_data=test_data, test_labels=test_labels, what="waimai")
 
 
 def test_maxent():
@@ -130,7 +142,7 @@ def test_svm():
     get_accuracy(test_labels, classify_labels, parameters, filepath)
 
 
-def test_multiple_classifiers():
+def test_waimai_multiple_classifiers():
     """
     test the Fusion of Multiple Classifiers
     """
@@ -144,7 +156,7 @@ def test_multiple_classifiers():
     prob = True
     knn = False
 
-    mc = WaiMaiMultipleClassifiers(train_data, train_labels, best_words, max_iter, knn)
+    mc = WaiMaiMultipleClassifiers(train_data, train_labels, best_words, max_iter, C, knn)
 
     print("WaiMaiMultipleClassifiers is testing ...")
     classify_labels = []
@@ -153,9 +165,121 @@ def test_multiple_classifiers():
 
     print("WaiMaiMultipleClassifiers tests over.")
 
-    filepath = "f_runout/Multiple-waimai-pt-%d-%d-nt-%d-%d-iter-%d-knn-%s-prob-%s-%s.xls" % (
-        pos_train_num, pos_test_num, neg_train_num, neg_test_num, max_iter, "True" if knn else "False",
+    filepath = "f_runout/Multiple-waimai-pt-%d-%d-nt-%d-%d-iter-%d-C-%d-knn-%s-prob-%s-%s.xls" % (
+        pos_train_num, pos_test_num, neg_train_num, neg_test_num, max_iter, C,  "True" if knn else "False",
         "True" if prob else "False", datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
+
+    get_accuracy(test_labels, classify_labels, parameters, filepath)
+
+
+def test_waimai_multiple_classifiers2():
+    """
+    test the Fusion of Multiple Classifiers
+    """
+    print("Fusion of Multiple Classifiers")
+    print("---" * 45)
+
+    from fomc.classifiers import WaiMaiMultipleClassifiers2
+
+    # get the instance of classifiers
+    mc = WaiMaiMultipleClassifiers2(train_data, train_labels, best_words, max_iter, C)
+
+    print("WaiMaiMultipleClassifiers is testing ...")
+    classify_labels = []
+    for data in test_data:
+        classify_labels.append(mc.classify(data))
+
+    print("WaiMaiMultipleClassifiers tests over.")
+
+    filepath = "f_runout/Multiple2-waimai-pt-%d-%d-nt-%d-%d-iter-%d-C-%d--%s.xls" % (
+        pos_train_num, pos_test_num, neg_train_num, neg_test_num, max_iter, C,
+        datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
+
+    get_accuracy(test_labels, classify_labels, parameters, filepath)
+
+
+def test_waimai_multiple_classifiers3():
+    """
+    test the Fusion of Multiple Classifiers
+    """
+    print("Fusion of Multiple Classifiers")
+    print("---" * 45)
+
+    from fomc.classifiers import WaiMaiMultipleClassifiers
+
+    # get the instance of classifiers
+    # prob = False
+    prob = True
+    knn = True
+
+    mc = WaiMaiMultipleClassifiers(train_data, train_labels, best_words, max_iter, C, knn)
+
+    print("WaiMaiMultipleClassifiers is testing ...")
+    classify_labels = []
+    for data in test_data:
+        classify_labels.append(mc.classify(data, prob))
+
+    print("WaiMaiMultipleClassifiers tests over.")
+
+    filepath = "f_runout/Multiple3-waimai-pt-%d-%d-nt-%d-%d-iter-%d-C-%d-knn-%s-prob-%s-%s.xls" % (
+        pos_train_num, pos_test_num, neg_train_num, neg_test_num, max_iter, C,  "True" if knn else "False",
+        "True" if prob else "False", datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
+
+    get_accuracy(test_labels, classify_labels, parameters, filepath)
+
+
+def test_waimai_multiple_classifiers4():
+    """
+    test the Fusion of Multiple Classifiers
+    """
+    print("Fusion of Multiple Classifiers")
+    print("---" * 45)
+
+    from fomc.classifiers import WaiMaiMultipleClassifiers3
+
+    # get the instance of classifiers
+    # prob = False
+
+    mc = WaiMaiMultipleClassifiers3(train_data, train_labels, best_words, max_iter, C)
+
+    print("WaiMaiMultipleClassifiers is testing ...")
+    classify_labels = []
+    for data in test_data:
+        classify_labels.append(mc.classify(data))
+
+    print("WaiMaiMultipleClassifiers tests over.")
+
+    filepath = "f_runout/Multiple4-waimai-pt-%d-%d-nt-%d-%d-iter-%d-C-%d-%s.xls" % (
+        pos_train_num, pos_test_num, neg_train_num, neg_test_num, max_iter, C,
+        datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
+
+    get_accuracy(test_labels, classify_labels, parameters, filepath)
+
+
+def test_waimai_multiple_classifiers5():
+    """
+    test the Fusion of Multiple Classifiers
+    """
+    print("Fusion of Multiple Classifiers")
+    print("---" * 45)
+
+    from fomc.classifiers import WaiMaiMultipleClassifiers4
+
+    # get the instance of classifiers
+    # prob = False
+
+    mc = WaiMaiMultipleClassifiers4(train_data, train_labels, best_words, max_iter, C)
+
+    print("WaiMaiMultipleClassifiers is testing ...")
+    classify_labels = []
+    for data in test_data:
+        classify_labels.append(mc.classify(data))
+
+    print("WaiMaiMultipleClassifiers tests over.")
+
+    filepath = "f_runout/Multiple5-waimai-pt-%d-%d-nt-%d-%d-iter-%d-C-%d-%s.xls" % (
+        pos_train_num, pos_test_num, neg_train_num, neg_test_num, max_iter, C,
+        datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
 
     get_accuracy(test_labels, classify_labels, parameters, filepath)
 
@@ -164,8 +288,9 @@ if __name__ == "__main__":
     pos_train_num = neg_train_num = 3500
     pos_test_num = neg_test_num = 1000
     feature_num = 4000
-    max_iter = 800
-    C = 50
+    max_iter = 50
+    C = 20
+    ratio = 0.5
     parameters = [pos_train_num, neg_train_num, pos_test_num, neg_test_num, feature_num]
 
     # get the f_corpus
@@ -192,9 +317,14 @@ if __name__ == "__main__":
 
     # test maxent
     # test_maxent()
+    # test_maxent_iteration()
 
     # test SVM
-    test_svm()
+    # test_svm()
 
     # test multiple_classifiers
-    # test_multiple_classifiers()
+    # test_waimai_multiple_classifiers()
+    # test_waimai_multiple_classifiers2()
+    # test_waimai_multiple_classifiers3()
+    # test_waimai_multiple_classifiers4()
+    test_waimai_multiple_classifiers5()
