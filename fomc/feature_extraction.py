@@ -39,12 +39,6 @@ class ChiSquare:
             return [word[0] for word in words[:num]]
 
 
-class TFIDF:
-    def __init__(self, doc_list, doc_labels):
-        pass
-
-
-
 
 
 

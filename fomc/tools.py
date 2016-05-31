@@ -19,7 +19,7 @@ class Write2File:
                 f.write(content)
 
     @staticmethod
-    def write_xls(filepath, contents):
+    def write_contents(filepath, contents):
         if os.path.exists(filepath):
             os.remove(filepath)
 
@@ -51,15 +51,23 @@ class Write2File:
         else:
             print("The output format is wrong!")
 
+    @staticmethod
+    def write_results(origin_labels, classify_labels, filepath):
+        wb = xlwt.Workbook()
+        sh = wb.add_sheet("results")
+        for i in range(len(origin_labels)):
+            sh.write(i, 0, origin_labels[i])
+            sh.write(i, 1, int(classify_labels[i]))
+        wb.save(filepath.split(".")[0] + "_label.xls")
 
-def get_accuracy(origin_labels, classify_labels, parameters, output_filepath=None):
+
+def get_accuracy(origin_labels, classify_labels, parameters):
     assert len(origin_labels) == len(classify_labels)
 
     xls_contents = []
 
-    xls_contents.extend([("pos train", parameters[0]), ("pos test", parameters[1])])
-    xls_contents.extend([("neg train", parameters[2]), ("neg test", parameters[3])])
-    xls_contents.append(("feature num", parameters[4]))
+    xls_contents.extend([("train num", parameters[0]), ("test num", parameters[1])])
+    xls_contents.append(("feature num", parameters[2]))
 
     pos_right, pos_false = 0, 0
     neg_right, neg_false = 0, 0
@@ -97,15 +105,5 @@ def get_accuracy(origin_labels, classify_labels, parameters, output_filepath=Non
           (pos_right, pos_false, neg_right, neg_false, pos_precision, pos_recall,
            pos_f1, neg_precision, neg_recall, neg_f1, total_recall))
 
-    if output_filepath:
-        Write2File.write_xls(output_filepath, xls_contents)
-
-        wb = xlwt.Workbook()
-        sh = wb.add_sheet("temp")
-        for i in range(len(origin_labels)):
-            sh.write(i, 0, origin_labels[i])
-            sh.write(i, 1, int(classify_labels[i]))
-        wb.save(output_filepath.split(".")[0] + "_label.xls")
-    else:
-        return xls_contents
+    return xls_contents
 
